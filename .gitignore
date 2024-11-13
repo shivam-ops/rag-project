@@ -1,0 +1,29 @@
+# Python
+*.py[cod]
+__pycache__/
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Virtual Environments
+.venv/
+venv/
+env/
+ENV/
+*.env
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# VSCode and other editor settings
+.vscode/
+.idea/
+*.swp
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
