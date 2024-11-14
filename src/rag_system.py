@@ -1,5 +1,5 @@
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_openai import AzureOpenAIEmbeddings, AzureChatOpenAI
 from langchain_community.vectorstores import FAISS
 from langchain_community.document_loaders import TextLoader
 from langchain.schema.messages import HumanMessage, SystemMessage, AIMessage
@@ -10,14 +10,28 @@ from .config import Config
 class RAGSystem:
     def __init__(self, file_path: str = Config.DATA_PATH):
         self.file_path = file_path
-        self.embeddings = OpenAIEmbeddings()
-        self.llm = ChatOpenAI(
-            model_name=Config.MODEL_NAME,
+
+        # Initialize Azure OpenAI embeddings
+        self.embeddings = AzureOpenAIEmbeddings(
+            azure_deployment=Config.AZURE_EMBEDDINGS_DEPLOYMENT,
+            openai_api_version=Config.AZURE_API_VERSION,
+            azure_endpoint=Config.AZURE_ENDPOINT,
+            api_key=Config.AZURE_API_KEY,
+        )
+
+        # Initialize Azure ChatOpenAI
+        self.llm = AzureChatOpenAI(
+            azure_deployment=Config.AZURE_DEPLOYMENT,
+            openai_api_version=Config.AZURE_API_VERSION,
+            azure_endpoint=Config.AZURE_ENDPOINT,
+            api_key=Config.AZURE_API_KEY,
             temperature=0.7
         )
+
         self.vector_store = None
         self.chat_history = []
 
+    # Rest of the code remains the same
     def load_and_process_document(self):
         print("Loading and processing document...")
         try:
@@ -31,7 +45,6 @@ class RAGSystem:
             chunks = text_splitter.split_documents(documents)
             print(f"Document split into {len(chunks)} chunks")
 
-            # Ensure chunks are proper Document objects
             processed_chunks = []
             for chunk in chunks:
                 if isinstance(chunk, Document):
@@ -54,25 +67,17 @@ class RAGSystem:
             raise ValueError("Please load and process the document first")
 
         try:
-            # Get relevant documents
             docs = self.vector_store.similarity_search(question, k=Config.TOP_K_RESULTS)
-
-            # Prepare context
             context = "\n\n".join(doc.page_content for doc in docs)
 
-            # Create messages using the proper message schema
             messages = [
                 SystemMessage(content="You are a helpful assistant. Use the following context to answer the question."),
                 HumanMessage(content=f"Context: {context}\n\nQuestion: {question}")
             ]
 
-            # Get response from OpenAI
             response = self.llm.invoke(messages)
-
-            # Extract the response content
             response_content = response.content if hasattr(response, 'content') else str(response)
 
-            # Update chat history
             self.chat_history.append((question, response_content))
 
             return {
